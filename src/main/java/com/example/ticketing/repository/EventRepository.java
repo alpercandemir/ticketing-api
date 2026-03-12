@@ -13,9 +13,6 @@ import java.util.List;
 public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByOwnerId(Long ownerId);
 
-    List<Event> findByPublishedTrueAndStartsAtAfter(LocalDateTime from);
-    List<Event> findByPublishedTrueAndStartsAtBetween(LocalDateTime from, LocalDateTime to);
-
     @Query("""
         SELECT e FROM Event e WHERE e.published = true
         AND (:from IS NULL OR e.startsAt >= :from)
