@@ -1,5 +1,6 @@
 package com.example.ticketing.service;
 
+import com.example.ticketing.domain.Role;
 import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;

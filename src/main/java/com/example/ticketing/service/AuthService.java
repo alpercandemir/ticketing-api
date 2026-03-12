@@ -1,5 +1,6 @@
 package com.example.ticketing.service;
 
+import com.example.ticketing.domain.Role;
 import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
@@ -40,15 +41,12 @@ public class AuthService {
             throw new IllegalArgumentException("Email already in use");
         }
 
-        String role = request.role() != null ? request.role() : "ROLE_CUSTOMER";
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role;
-        }
+        Role role = request.role() != null ? request.role() : Role.ROLE_CUSTOMER;
 
         User user = User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
-                .roles(role)
+                .roles(role.name())
                 .build();
 
         userRepository.save(user);
