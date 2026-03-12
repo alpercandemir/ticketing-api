@@ -28,8 +28,6 @@ public class User {
 
     private LocalDateTime lastLoginAt;
 
-    protected User() {}
-
     public Long getId() {
         return id;
     }

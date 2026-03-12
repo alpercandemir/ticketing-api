@@ -3,21 +3,19 @@ package com.example.ticketing.service;
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.domain.Reservation;
 import com.example.ticketing.domain.ReservationStatus;
-import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.ReservationRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.repository.ReservationRepository;
-import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.context.SecurityContextImpl;
 
 import java.util.Optional;
 
@@ -34,36 +32,21 @@ class ReservationServiceTest {
     @Mock
     private EventRepository eventRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private SecurityContext securityContext;
-
-    @Mock
-    private Authentication authentication;
-
-    @Mock
-    private UserDetails userDetails;
-
     @InjectMocks
     private ReservationService reservationService;
 
-    private User testUser;
+    private UserPrincipal testUser;
     private Event testEvent;
 
     @BeforeEach
     void setUp() {
-        testUser = User.builder().id(1L).email("user@test.com").roles("ROLE_CUSTOMER").build();
+        testUser = new UserPrincipal(1L, "user@test.com", "encoded", "ROLE_CUSTOMER");
         testEvent = Event.builder().id(1L).ownerId(2L).capacity(10).published(true).build();
     }
 
     private void mockSecurityContext() {
-        SecurityContextHolder.setContext(securityContext);
-        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
-        lenient().when(authentication.getPrincipal()).thenReturn(userDetails);
-        lenient().when(userDetails.getUsername()).thenReturn("user@test.com");
-        lenient().when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+        var auth = new UsernamePasswordAuthenticationToken(testUser, null, testUser.getAuthorities());
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
     }
 
     @Test

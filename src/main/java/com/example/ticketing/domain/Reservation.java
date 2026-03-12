@@ -29,8 +29,6 @@ public class Reservation {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected Reservation() {}
-
     public Long getId() {
         return id;
     }

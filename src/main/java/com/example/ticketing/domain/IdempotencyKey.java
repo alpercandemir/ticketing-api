@@ -35,8 +35,6 @@ public class IdempotencyKey {
     @Column(nullable = false)
     private LocalDateTime ttl;
 
-    protected IdempotencyKey() {}
-
     public Long getId() {
         return id;
     }

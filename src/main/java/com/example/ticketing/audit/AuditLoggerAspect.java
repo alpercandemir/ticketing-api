@@ -2,7 +2,7 @@ package com.example.ticketing.audit;
 
 import com.example.ticketing.domain.AuditLog;
 import com.example.ticketing.repository.AuditLogRepository;
-import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.aspectj.lang.JoinPoint;
@@ -11,7 +11,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -25,11 +24,9 @@ public class AuditLoggerAspect {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuditLoggerAspect.class);
 
     private final AuditLogRepository auditLogRepository;
-    private final UserRepository userRepository;
 
-    public AuditLoggerAspect(AuditLogRepository auditLogRepository, UserRepository userRepository) {
+    public AuditLoggerAspect(AuditLogRepository auditLogRepository) {
         this.auditLogRepository = auditLogRepository;
-        this.userRepository = userRepository;
     }
 
     @AfterReturning(pointcut = "@annotation(com.example.ticketing.audit.AuditLoggable)", returning = "result")
@@ -94,10 +91,8 @@ public class AuditLoggerAspect {
 
     private Long getActorId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails) {
-            return userRepository.findByEmail(userDetails.getUsername())
-                    .map(com.example.ticketing.domain.User::getId)
-                    .orElse(null);
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
+            return principal.getId();
         }
         return null;
     }

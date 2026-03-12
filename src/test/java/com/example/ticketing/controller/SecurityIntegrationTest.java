@@ -2,6 +2,7 @@ package com.example.ticketing.controller;
 
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.repository.EventRepository;
+import com.example.ticketing.support.TestAuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,7 +112,7 @@ class SecurityIntegrationTest {
     // --- Role-based access: ORGANIZER can create events ---
 
     @Test
-    @WithMockUser(username = "organizer@example.com", roles = "ORGANIZER")
+    @TestAuthenticatedUser(id = 2, email = "organizer@example.com", roles = "ROLE_ORGANIZER")
     void createEvent_AsOrganizer_Returns201() throws Exception {
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +121,7 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "organizer@example.com", roles = "ORGANIZER")
+    @TestAuthenticatedUser(id = 2, email = "organizer@example.com", roles = "ROLE_ORGANIZER")
     void listEvents_AsOrganizer_Returns200() throws Exception {
         mockMvc.perform(get("/api/events"))
                 .andExpect(status().isOk());
@@ -129,7 +130,7 @@ class SecurityIntegrationTest {
     // --- Role-based access: ADMIN has full access ---
 
     @Test
-    @WithMockUser(username = "admin@example.com", roles = "ADMIN")
+    @TestAuthenticatedUser(id = 1, email = "admin@example.com", roles = "ROLE_ADMIN")
     void createEvent_AsAdmin_Returns201() throws Exception {
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -140,7 +141,7 @@ class SecurityIntegrationTest {
     // --- Role-based access: CUSTOMER can reserve seats ---
 
     @Test
-    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    @TestAuthenticatedUser(id = 3, email = "customer@example.com", roles = "ROLE_CUSTOMER")
     void reserveSeats_AsCustomer_Returns201() throws Exception {
         mockMvc.perform(post("/api/events/" + publishedEventId + "/reservations")
                         .contentType(MediaType.APPLICATION_JSON)

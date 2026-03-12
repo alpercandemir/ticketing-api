@@ -36,8 +36,6 @@ public class Event {
     @Column(nullable = false)
     private Long version;
 
-    protected Event() {}
-
     public Long getId() {
         return id;
     }

@@ -2,13 +2,11 @@ package com.example.ticketing.service;
 
 import com.example.ticketing.audit.AuditLoggable;
 import com.example.ticketing.domain.Event;
-import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
-import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.UserPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,20 +17,18 @@ import java.util.List;
 public class EventService {
 
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
 
-    public EventService(EventRepository eventRepository, UserRepository userRepository) {
+    public EventService(EventRepository eventRepository) {
         this.eventRepository = eventRepository;
-        this.userRepository = userRepository;
     }
 
     @Transactional
     @AuditLoggable(action = "CREATE_EVENT", resourceType = "Event")
     public Event createEvent(EventRequest request) {
-        User owner = getCurrentUser();
+        UserPrincipal principal = getCurrentUser();
 
         Event event = Event.builder()
-                .ownerId(owner.getId())
+                .ownerId(principal.getId())
                 .title(request.title())
                 .venue(request.venue())
                 .startsAt(request.startsAt())
@@ -74,11 +70,11 @@ public class EventService {
     }
 
     public List<Event> listEvents(Long ownerId) {
-        User currentUser = getCurrentUser();
-        boolean isAdmin = currentUser.getRoles().contains("ROLE_ADMIN");
+        UserPrincipal principal = getCurrentUser();
+        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
 
         if (ownerId != null) {
-            if (!isAdmin && !currentUser.getId().equals(ownerId)) {
+            if (!isAdmin && !principal.getId().equals(ownerId)) {
                 throw new AccessDeniedException("You can only list your own events");
             }
             return eventRepository.findByOwnerId(ownerId);
@@ -87,28 +83,27 @@ public class EventService {
         if (isAdmin) {
             return eventRepository.findAll();
         }
-        return eventRepository.findByOwnerId(currentUser.getId());
+        return eventRepository.findByOwnerId(principal.getId());
     }
 
     public List<Event> discoverEvents(LocalDateTime from, LocalDateTime to, String q) {
         return eventRepository.discoverEvents(from, to, q);
     }
 
-    private User getCurrentUser() {
+    private UserPrincipal getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (principal instanceof UserDetails userDetails) {
-            return userRepository.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal;
         }
 
         throw new AccessDeniedException("User not authenticated");
     }
 
     private void verifyOwnershipOrAdmin(Event event) {
-        User currentUser = getCurrentUser();
-        boolean isAdmin = currentUser.getRoles().contains("ROLE_ADMIN");
-        boolean isOwner = event.getOwnerId().equals(currentUser.getId());
+        UserPrincipal principal = getCurrentUser();
+        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
+        boolean isOwner = event.getOwnerId().equals(principal.getId());
 
         if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You are not authorized to modify this event");

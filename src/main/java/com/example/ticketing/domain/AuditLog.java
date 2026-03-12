@@ -30,8 +30,6 @@ public class AuditLog {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    protected AuditLog() {}
-
     public Long getId() {
         return id;
     }

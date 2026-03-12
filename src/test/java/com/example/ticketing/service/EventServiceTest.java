@@ -1,10 +1,9 @@
 package com.example.ticketing.service;
 
 import com.example.ticketing.domain.Event;
-import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
-import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,10 +11,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.context.SecurityContextImpl;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,31 +27,24 @@ import static org.mockito.Mockito.*;
 class EventServiceTest {
 
     @Mock private EventRepository eventRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private SecurityContext securityContext;
-    @Mock private Authentication authentication;
-    @Mock private UserDetails userDetails;
 
     @InjectMocks
     private EventService eventService;
 
-    private User organizer;
-    private User admin;
-    private User otherUser;
+    private UserPrincipal organizer;
+    private UserPrincipal admin;
+    private UserPrincipal otherUser;
 
     @BeforeEach
     void setUp() {
-        organizer = User.builder().id(1L).email("organizer@test.com").roles("ROLE_ORGANIZER").build();
-        admin = User.builder().id(2L).email("admin@test.com").roles("ROLE_ADMIN").build();
-        otherUser = User.builder().id(3L).email("other@test.com").roles("ROLE_ORGANIZER").build();
+        organizer = new UserPrincipal(1L, "organizer@test.com", "encoded", "ROLE_ORGANIZER");
+        admin = new UserPrincipal(2L, "admin@test.com", "encoded", "ROLE_ADMIN");
+        otherUser = new UserPrincipal(3L, "other@test.com", "encoded", "ROLE_ORGANIZER");
     }
 
-    private void mockUser(User user) {
-        SecurityContextHolder.setContext(securityContext);
-        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
-        lenient().when(authentication.getPrincipal()).thenReturn(userDetails);
-        lenient().when(userDetails.getUsername()).thenReturn(user.getEmail());
-        lenient().when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+    private void mockUser(UserPrincipal principal) {
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
     }
 
     @Test

@@ -4,14 +4,12 @@ import com.example.ticketing.audit.AuditLoggable;
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.domain.Reservation;
 import com.example.ticketing.domain.ReservationStatus;
-import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.ReservationRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.repository.ReservationRepository;
-import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.UserPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,20 +18,17 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
-                              EventRepository eventRepository,
-                              UserRepository userRepository) {
+                              EventRepository eventRepository) {
         this.reservationRepository = reservationRepository;
         this.eventRepository = eventRepository;
-        this.userRepository = userRepository;
     }
 
     @Transactional
     @AuditLoggable(action = "CREATE_RESERVATION", resourceType = "Reservation")
     public Reservation reserveSeats(Long eventId, ReservationRequest request) {
-        User user = getCurrentUser();
+        UserPrincipal principal = getCurrentUser();
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
@@ -51,7 +46,7 @@ public class ReservationService {
 
         Reservation reservation = Reservation.builder()
                 .eventId(event.getId())
-                .userId(user.getId())
+                .userId(principal.getId())
                 .seats(request.seats())
                 .status(ReservationStatus.PENDING)
                 .build();
@@ -97,21 +92,20 @@ public class ReservationService {
         reservationRepository.save(reservation);
     }
 
-    private User getCurrentUser() {
+    private UserPrincipal getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (principal instanceof UserDetails userDetails) {
-            return userRepository.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal;
         }
 
         throw new AccessDeniedException("User not authenticated");
     }
 
     private void verifyOwnershipOrAdmin(Reservation reservation) {
-        User currentUser = getCurrentUser();
-        boolean isAdmin = currentUser.getRoles().contains("ROLE_ADMIN");
-        boolean isOwner = reservation.getUserId().equals(currentUser.getId());
+        UserPrincipal principal = getCurrentUser();
+        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
+        boolean isOwner = reservation.getUserId().equals(principal.getId());
 
         if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You are not authorized to modify this reservation");
