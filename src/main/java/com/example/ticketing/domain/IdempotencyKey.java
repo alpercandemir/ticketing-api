@@ -6,7 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "idempotency_keys")
 public class IdempotencyKey {
 
     @Id
