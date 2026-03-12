@@ -3,13 +3,12 @@ package com.example.ticketing.controller;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
 import com.example.ticketing.dto.RegisterRequest;
+import com.example.ticketing.dto.RefreshTokenRequest;
 import com.example.ticketing.service.AuthService;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,7 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(authService.refresh(body));
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 }

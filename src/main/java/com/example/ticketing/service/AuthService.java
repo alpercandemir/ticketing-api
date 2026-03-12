@@ -4,6 +4,7 @@ import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
 import com.example.ticketing.dto.RegisterRequest;
+import com.example.ticketing.dto.RefreshTokenRequest;
 import com.example.ticketing.repository.UserRepository;
 import com.example.ticketing.security.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,7 +17,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Service
 public class AuthService {
@@ -79,11 +79,8 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshToken, user.getEmail());
     }
 
-    public AuthResponse refresh(Map<String, String> body) {
-        String refreshToken = body.get("refreshToken");
-        if (refreshToken == null || refreshToken.isBlank()) {
-            throw new IllegalArgumentException("refreshToken is required");
-        }
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken();
         String email = tokenProvider.getUsernameFromToken(refreshToken);
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         if (!tokenProvider.validateToken(refreshToken, userDetails)) {

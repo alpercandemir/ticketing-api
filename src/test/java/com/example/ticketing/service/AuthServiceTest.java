@@ -4,6 +4,7 @@ import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
 import com.example.ticketing.dto.RegisterRequest;
+import com.example.ticketing.dto.RefreshTokenRequest;
 import com.example.ticketing.repository.UserRepository;
 import com.example.ticketing.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -143,17 +143,10 @@ class AuthServiceTest {
         when(tokenProvider.generateToken(mockDetails)).thenReturn("new-access");
         when(tokenProvider.generateRefreshToken(mockDetails)).thenReturn("new-refresh");
 
-        AuthResponse response = authService.refresh(Map.of("refreshToken", "old-refresh"));
+        AuthResponse response = authService.refresh(new RefreshTokenRequest("old-refresh"));
 
         assertEquals("new-access", response.accessToken());
         assertEquals("new-refresh", response.refreshToken());
-    }
-
-    @Test
-    void refresh_MissingToken_Throws() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> authService.refresh(Map.of()));
-        assertEquals("refreshToken is required", ex.getMessage());
     }
 
     @Test
@@ -165,6 +158,6 @@ class AuthServiceTest {
         when(tokenProvider.validateToken("bad-token", mockDetails)).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class,
-                () -> authService.refresh(Map.of("refreshToken", "bad-token")));
+                () -> authService.refresh(new RefreshTokenRequest("bad-token")));
     }
 }
