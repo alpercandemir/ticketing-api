@@ -12,26 +12,22 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "actor_id")
     private Long actorId;
 
     @Column(nullable = false)
     private String action;
 
-    @Column(name = "resource_type")
     private String resourceType;
 
-    @Column(name = "resource_id")
     private String resourceId;
 
-    @Column(name = "ip")
     private String ip;
 
-    @Column(name = "user_agent", length = 500)
+    @Column(length = 500)
     private String userAgent;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     protected AuditLog() {}

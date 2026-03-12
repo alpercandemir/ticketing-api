@@ -11,7 +11,7 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "owner_id", nullable = false)
+    @Column(nullable = false)
     private Long ownerId;
 
     @Column(nullable = false)
@@ -20,10 +20,10 @@ public class Event {
     @Column(nullable = false)
     private String venue;
 
-    @Column(name = "starts_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime startsAt;
 
-    @Column(name = "ends_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime endsAt;
 
     @Column(nullable = false)

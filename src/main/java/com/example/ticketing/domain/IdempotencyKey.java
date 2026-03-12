@@ -12,26 +12,24 @@ public class IdempotencyKey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "idempotency_key", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String idempotencyKey;
 
     @Column(nullable = false)
     private String endpoint;
 
-    @Column(name = "request_hash")
     private String requestHash;
 
-    @Column(name = "response_body", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String responseBody;
 
-    @Column(name = "response_status")
     private Integer responseStatus;
 
     @Column(nullable = false)
     private String status;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
