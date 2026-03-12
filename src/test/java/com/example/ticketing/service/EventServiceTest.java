@@ -3,7 +3,7 @@ package com.example.ticketing.service;
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
-import com.example.ticketing.security.UserPrincipal;
+import com.example.ticketing.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,18 +31,18 @@ class EventServiceTest {
     @InjectMocks
     private EventService eventService;
 
-    private UserPrincipal organizer;
-    private UserPrincipal admin;
-    private UserPrincipal otherUser;
+    private AuthenticatedUser organizer;
+    private AuthenticatedUser admin;
+    private AuthenticatedUser otherUser;
 
     @BeforeEach
     void setUp() {
-        organizer = new UserPrincipal(1L, "organizer@test.com", "encoded", "ROLE_ORGANIZER");
-        admin = new UserPrincipal(2L, "admin@test.com", "encoded", "ROLE_ADMIN");
-        otherUser = new UserPrincipal(3L, "other@test.com", "encoded", "ROLE_ORGANIZER");
+        organizer = new AuthenticatedUser(1L, "organizer@test.com", "encoded", "ROLE_ORGANIZER");
+        admin = new AuthenticatedUser(2L, "admin@test.com", "encoded", "ROLE_ADMIN");
+        otherUser = new AuthenticatedUser(3L, "other@test.com", "encoded", "ROLE_ORGANIZER");
     }
 
-    private void mockUser(UserPrincipal principal) {
+    private void mockUser(AuthenticatedUser principal) {
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.setContext(new SecurityContextImpl(auth));
     }

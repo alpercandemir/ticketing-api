@@ -7,7 +7,7 @@ import com.example.ticketing.domain.ReservationStatus;
 import com.example.ticketing.dto.ReservationRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.repository.ReservationRepository;
-import com.example.ticketing.security.UserPrincipal;
+import com.example.ticketing.security.AuthenticatedUser;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class ReservationService {
     @Transactional
     @AuditLoggable(action = "CREATE_RESERVATION", resourceType = "Reservation")
     public Reservation reserveSeats(Long eventId, ReservationRequest request) {
-        UserPrincipal principal = getCurrentUser();
+        AuthenticatedUser principal = getCurrentUser();
 
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
@@ -92,18 +92,18 @@ public class ReservationService {
         reservationRepository.save(reservation);
     }
 
-    private UserPrincipal getCurrentUser() {
+    private AuthenticatedUser getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (principal instanceof UserPrincipal userPrincipal) {
-            return userPrincipal;
+        if (principal instanceof AuthenticatedUser authenticatedUser) {
+            return authenticatedUser;
         }
 
         throw new AccessDeniedException("User not authenticated");
     }
 
     private void verifyOwnershipOrAdmin(Reservation reservation) {
-        UserPrincipal principal = getCurrentUser();
+        AuthenticatedUser principal = getCurrentUser();
         boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
         boolean isOwner = reservation.getUserId().equals(principal.getId());
 

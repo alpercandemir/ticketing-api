@@ -4,7 +4,7 @@ import com.example.ticketing.audit.AuditLoggable;
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
-import com.example.ticketing.security.UserPrincipal;
+import com.example.ticketing.security.AuthenticatedUser;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class EventService {
     @Transactional
     @AuditLoggable(action = "CREATE_EVENT", resourceType = "Event")
     public Event createEvent(EventRequest request) {
-        UserPrincipal principal = getCurrentUser();
+        AuthenticatedUser principal = getCurrentUser();
 
         Event event = Event.builder()
                 .ownerId(principal.getId())
@@ -70,7 +70,7 @@ public class EventService {
     }
 
     public List<Event> listEvents(Long ownerId) {
-        UserPrincipal principal = getCurrentUser();
+        AuthenticatedUser principal = getCurrentUser();
         boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
 
         if (ownerId != null) {
@@ -90,18 +90,18 @@ public class EventService {
         return eventRepository.discoverEvents(from, to, q);
     }
 
-    private UserPrincipal getCurrentUser() {
+    private AuthenticatedUser getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (principal instanceof UserPrincipal userPrincipal) {
-            return userPrincipal;
+        if (principal instanceof AuthenticatedUser authenticatedUser) {
+            return authenticatedUser;
         }
 
         throw new AccessDeniedException("User not authenticated");
     }
 
     private void verifyOwnershipOrAdmin(Event event) {
-        UserPrincipal principal = getCurrentUser();
+        AuthenticatedUser principal = getCurrentUser();
         boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
         boolean isOwner = event.getOwnerId().equals(principal.getId());
 

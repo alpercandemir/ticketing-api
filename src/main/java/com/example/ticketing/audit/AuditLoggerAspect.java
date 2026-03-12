@@ -2,7 +2,7 @@ package com.example.ticketing.audit;
 
 import com.example.ticketing.domain.AuditLog;
 import com.example.ticketing.repository.AuditLogRepository;
-import com.example.ticketing.security.UserPrincipal;
+import com.example.ticketing.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.aspectj.lang.JoinPoint;
@@ -91,7 +91,7 @@ public class AuditLoggerAspect {
 
     private Long getActorId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
+        if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser principal) {
             return principal.getId();
         }
         return null;

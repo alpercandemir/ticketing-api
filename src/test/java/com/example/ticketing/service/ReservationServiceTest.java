@@ -6,7 +6,7 @@ import com.example.ticketing.domain.ReservationStatus;
 import com.example.ticketing.dto.ReservationRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.repository.ReservationRepository;
-import com.example.ticketing.security.UserPrincipal;
+import com.example.ticketing.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,12 +35,12 @@ class ReservationServiceTest {
     @InjectMocks
     private ReservationService reservationService;
 
-    private UserPrincipal testUser;
+    private AuthenticatedUser testUser;
     private Event testEvent;
 
     @BeforeEach
     void setUp() {
-        testUser = new UserPrincipal(1L, "user@test.com", "encoded", "ROLE_CUSTOMER");
+        testUser = new AuthenticatedUser(1L, "user@test.com", "encoded", "ROLE_CUSTOMER");
         testEvent = Event.builder().id(1L).ownerId(2L).capacity(10).published(true).build();
     }
 
