@@ -2,6 +2,7 @@ package com.example.ticketing.service;
 
 import com.example.ticketing.audit.AuditLoggable;
 import com.example.ticketing.domain.Event;
+import com.example.ticketing.domain.Role;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.security.AuthenticatedUser;
@@ -71,7 +72,7 @@ public class EventService {
 
     public List<Event> listEvents(Long ownerId) {
         AuthenticatedUser principal = getCurrentUser();
-        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
+        boolean isAdmin = principal.hasRole(Role.ROLE_ADMIN);
 
         if (ownerId != null) {
             if (!isAdmin && !principal.getId().equals(ownerId)) {
@@ -102,7 +103,7 @@ public class EventService {
 
     private void verifyOwnershipOrAdmin(Event event) {
         AuthenticatedUser principal = getCurrentUser();
-        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
+        boolean isAdmin = principal.hasRole(Role.ROLE_ADMIN);
         boolean isOwner = event.getOwnerId().equals(principal.getId());
 
         if (!isAdmin && !isOwner) {

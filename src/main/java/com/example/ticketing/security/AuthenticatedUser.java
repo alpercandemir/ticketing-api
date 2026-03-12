@@ -1,5 +1,6 @@
 package com.example.ticketing.security;
 
+import com.example.ticketing.domain.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,6 +32,10 @@ public class AuthenticatedUser implements UserDetails {
 
     public String getRoles() {
         return roles;
+    }
+
+    public boolean hasRole(Role role) {
+        return roles != null && roles.contains(role.name());
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.example.ticketing.audit.AuditLoggable;
 import com.example.ticketing.domain.Event;
 import com.example.ticketing.domain.Reservation;
 import com.example.ticketing.domain.ReservationStatus;
+import com.example.ticketing.domain.Role;
 import com.example.ticketing.dto.ReservationRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.repository.ReservationRepository;
@@ -104,7 +105,7 @@ public class ReservationService {
 
     private void verifyOwnershipOrAdmin(Reservation reservation) {
         AuthenticatedUser principal = getCurrentUser();
-        boolean isAdmin = principal.getRoles().contains("ROLE_ADMIN");
+        boolean isAdmin = principal.hasRole(Role.ROLE_ADMIN);
         boolean isOwner = reservation.getUserId().equals(principal.getId());
 
         if (!isAdmin && !isOwner) {
