@@ -18,13 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReservationService {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReservationService.class);
-
     private final ReservationRepository reservationRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
-    public ReservationService(ReservationRepository reservationRepository, EventRepository eventRepository, UserRepository userRepository) {
+    public ReservationService(ReservationRepository reservationRepository,
+                              EventRepository eventRepository,
+                              UserRepository userRepository) {
         this.reservationRepository = reservationRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
@@ -34,8 +34,7 @@ public class ReservationService {
     @AuditLoggable(action = "CREATE_RESERVATION", resourceType = "Reservation")
     public Reservation reserveSeats(Long eventId, ReservationRequest request) {
         User user = getCurrentUser();
-        
-        // This findById triggers a read. Concurrent transactions might read the same state.
+
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
@@ -47,11 +46,7 @@ public class ReservationService {
             throw new IllegalStateException("Not enough capacity");
         }
 
-        // Deduct capacity
         event.setCapacity(event.getCapacity() - request.seats());
-        
-        // Spring Data JPA checks @Version when saving and flushes to DB. 
-        // If another transaction modified the event concurrently, an ObjectOptimisticLockingFailureException is thrown.
         eventRepository.save(event);
 
         Reservation reservation = Reservation.builder()
@@ -66,7 +61,7 @@ public class ReservationService {
 
     @Transactional
     @AuditLoggable(action = "CONFIRM_RESERVATION", resourceType = "Reservation")
-    public Reservation confirmReservation(Long reservationId) {
+    public void confirmReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
 
@@ -77,22 +72,21 @@ public class ReservationService {
         }
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
-        return reservationRepository.save(reservation);
+        reservationRepository.save(reservation);
     }
 
     @Transactional
     @AuditLoggable(action = "CANCEL_RESERVATION", resourceType = "Reservation")
-    public Reservation cancelReservation(Long reservationId) {
+    public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
 
         verifyOwnershipOrAdmin(reservation);
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            return reservation; // Or throw an exception
+            return;
         }
 
-        // Return seats to the event capacity
         Event event = eventRepository.findById(reservation.getEventId())
                 .orElseThrow(() -> new IllegalStateException("Event not found for reservation"));
 
@@ -100,16 +94,17 @@ public class ReservationService {
         eventRepository.save(event);
 
         reservation.setStatus(ReservationStatus.CANCELLED);
-        return reservationRepository.save(reservation);
+        reservationRepository.save(reservation);
     }
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetails) {
-            String email = ((UserDetails) principal).getUsername();
-            return userRepository.findByEmail(email)
+
+        if (principal instanceof UserDetails userDetails) {
+            return userRepository.findByEmail(userDetails.getUsername())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
         }
+
         throw new AccessDeniedException("User not authenticated");
     }
 

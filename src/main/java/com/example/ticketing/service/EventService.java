@@ -30,7 +30,7 @@ public class EventService {
     @AuditLoggable(action = "CREATE_EVENT", resourceType = "Event")
     public Event createEvent(EventRequest request) {
         User owner = getCurrentUser();
-        
+
         Event event = Event.builder()
                 .ownerId(owner.getId())
                 .title(request.title())
@@ -40,7 +40,7 @@ public class EventService {
                 .capacity(request.capacity())
                 .published(false)
                 .build();
-                
+
         return eventRepository.save(event);
     }
 
@@ -49,7 +49,7 @@ public class EventService {
     public Event updateEvent(Long id, EventRequest request) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
-                
+
         verifyOwnershipOrAdmin(event);
 
         event.setTitle(request.title());
@@ -68,7 +68,7 @@ public class EventService {
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
         verifyOwnershipOrAdmin(event);
-        
+
         event.setPublished(true);
         return eventRepository.save(event);
     }
@@ -96,11 +96,12 @@ public class EventService {
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetails) {
-            String email = ((UserDetails) principal).getUsername();
-            return userRepository.findByEmail(email)
+
+        if (principal instanceof UserDetails userDetails) {
+            return userRepository.findByEmail(userDetails.getUsername())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
         }
+
         throw new AccessDeniedException("User not authenticated");
     }
 

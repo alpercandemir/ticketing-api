@@ -1,9 +1,8 @@
 package com.example.ticketing.controller;
 
-import com.example.ticketing.domain.Event;
 import com.example.ticketing.dto.EventRequest;
+import com.example.ticketing.dto.EventResponse;
 import com.example.ticketing.service.EventService;
-
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -26,35 +25,48 @@ public class EventController {
 
     @PostMapping
     @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
-    public ResponseEntity<Event> createEvent(@Valid @RequestBody EventRequest request) {
-        Event event = eventService.createEvent(request);
-        return new ResponseEntity<>(event, HttpStatus.CREATED);
+    public ResponseEntity<EventResponse> createEvent(@Valid @RequestBody EventRequest request) {
+        EventResponse response = EventResponse.from(eventService.createEvent(request));
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
-    public ResponseEntity<Event> updateEvent(@PathVariable Long id, @Valid @RequestBody EventRequest request) {
-        return ResponseEntity.ok(eventService.updateEvent(id, request));
+    public ResponseEntity<EventResponse> updateEvent(
+            @PathVariable Long id,
+            @Valid @RequestBody EventRequest request) {
+
+        return ResponseEntity.ok(EventResponse.from(eventService.updateEvent(id, request)));
     }
 
     @PostMapping("/{id}/publish")
     @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
-    public ResponseEntity<Event> publishEvent(@PathVariable Long id) {
-        return ResponseEntity.ok(eventService.publishEvent(id));
+    public ResponseEntity<EventResponse> publishEvent(@PathVariable Long id) {
+        return ResponseEntity.ok(EventResponse.from(eventService.publishEvent(id)));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
-    public ResponseEntity<List<Event>> listEvents(
+    public ResponseEntity<List<EventResponse>> listEvents(
             @RequestParam(required = false) Long ownerId) {
-        return ResponseEntity.ok(eventService.listEvents(ownerId));
+
+        List<EventResponse> events = eventService.listEvents(ownerId).stream()
+                .map(EventResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(events);
     }
 
     @GetMapping("/public")
-    public ResponseEntity<List<Event>> discoverEvents(
+    public ResponseEntity<List<EventResponse>> discoverEvents(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(required = false) String q) {
-        return ResponseEntity.ok(eventService.discoverEvents(from, to, q));
+
+        List<EventResponse> events = eventService.discoverEvents(from, to, q).stream()
+                .map(EventResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(events);
     }
 }
