@@ -74,15 +74,30 @@ class ReservationServiceTest {
     @Test
     void reserveSeats_NotEnoughCapacity() {
         mockSecurityContext();
-        testEvent.setCapacity(1); // Only 1 seat left
+        testEvent.setCapacity(1);
         when(eventRepository.findById(1L)).thenReturn(Optional.of(testEvent));
 
-        ReservationRequest request = new ReservationRequest(2); // Requesting 2
-        
-        IllegalStateException ex = assertThrows(IllegalStateException.class, 
+        ReservationRequest request = new ReservationRequest(2);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> reservationService.reserveSeats(1L, request));
-                
+
         assertEquals("Not enough capacity", ex.getMessage());
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    @Test
+    void reserveSeats_UnpublishedEvent_Throws() {
+        mockSecurityContext();
+        testEvent.setPublished(false);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(testEvent));
+
+        ReservationRequest request = new ReservationRequest(1);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> reservationService.reserveSeats(1L, request));
+
+        assertEquals("Cannot reserve seats for an unpublished event", ex.getMessage());
         verify(eventRepository, never()).save(any(Event.class));
     }
 }

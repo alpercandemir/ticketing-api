@@ -7,6 +7,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AuthenticatedUser implements UserDetails {
 
@@ -14,6 +16,7 @@ public class AuthenticatedUser implements UserDetails {
     private final String email;
     private final String password;
     private final String roles;
+    private final Set<String> roleSet;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public AuthenticatedUser(Long id, String email, String password, String roles) {
@@ -21,7 +24,10 @@ public class AuthenticatedUser implements UserDetails {
         this.email = email;
         this.password = password;
         this.roles = roles;
-        this.authorities = Arrays.stream(roles.split(","))
+        this.roleSet = Arrays.stream(roles.split(","))
+                .map(String::trim)
+                .collect(Collectors.toUnmodifiableSet());
+        this.authorities = roleSet.stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
     }
@@ -35,7 +41,7 @@ public class AuthenticatedUser implements UserDetails {
     }
 
     public boolean hasRole(Role role) {
-        return roles != null && roles.contains(role.name());
+        return roleSet.contains(role.name());
     }
 
     @Override
@@ -53,4 +59,3 @@ public class AuthenticatedUser implements UserDetails {
         return email;
     }
 }
-

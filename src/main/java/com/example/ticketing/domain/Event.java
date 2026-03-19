@@ -108,6 +108,33 @@ public class Event {
         this.version = version;
     }
 
+    public void reserveSeats(int seats) {
+        if (!Boolean.TRUE.equals(published)) {
+            throw new IllegalArgumentException("Cannot reserve seats for an unpublished event");
+        }
+        if (capacity < seats) {
+            throw new IllegalStateException("Not enough capacity");
+        }
+        capacity -= seats;
+    }
+
+    public void releaseSeats(int seats) {
+        capacity += seats;
+    }
+
+    public void publish() {
+        this.published = true;
+    }
+
+    public void updateDetails(String title, String venue, LocalDateTime startsAt,
+                              LocalDateTime endsAt, Integer capacity) {
+        this.title = title;
+        this.venue = venue;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
+        this.capacity = capacity;
+    }
+
     public static Builder builder() {
         return new Builder();
     }

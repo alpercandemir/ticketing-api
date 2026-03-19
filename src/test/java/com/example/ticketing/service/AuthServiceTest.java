@@ -1,12 +1,12 @@
 package com.example.ticketing.service;
 
-import com.example.ticketing.domain.Role;
 import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
-import com.example.ticketing.dto.RegisterRequest;
 import com.example.ticketing.dto.RefreshTokenRequest;
+import com.example.ticketing.dto.RegisterRequest;
 import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.AuthenticatedUser;
 import com.example.ticketing.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,16 +17,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,14 +32,13 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private AuthenticationManager authenticationManager;
     @Mock private JwtTokenProvider tokenProvider;
-    @Mock private UserDetailsService userDetailsService;
 
     @InjectMocks
     private AuthService authService;
 
     @Test
     void register_Success() {
-        RegisterRequest request = new RegisterRequest("new@test.com", "password123", null);
+        RegisterRequest request = new RegisterRequest("new@test.com", "password123");
 
         when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
@@ -52,12 +47,8 @@ class AuthServiceTest {
             u.setId(1L);
             return u;
         });
-
-        UserDetails mockDetails = new org.springframework.security.core.userdetails.User(
-                "new@test.com", "$2a$encoded", List.of());
-        when(userDetailsService.loadUserByUsername("new@test.com")).thenReturn(mockDetails);
-        when(tokenProvider.generateToken(mockDetails)).thenReturn("access-token");
-        when(tokenProvider.generateRefreshToken(mockDetails)).thenReturn("refresh-token");
+        when(tokenProvider.generateToken(any(AuthenticatedUser.class))).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken(any(AuthenticatedUser.class))).thenReturn("refresh-token");
 
         AuthResponse response = authService.register(request);
 
@@ -68,8 +59,8 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_DefaultsToCustomerRole() {
-        RegisterRequest request = new RegisterRequest("new@test.com", "password123", null);
+    void register_AlwaysAssignsCustomerRole() {
+        RegisterRequest request = new RegisterRequest("new@test.com", "password123");
 
         when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
         when(passwordEncoder.encode(any())).thenReturn("encoded");
@@ -79,12 +70,8 @@ class AuthServiceTest {
             u.setId(1L);
             return u;
         });
-
-        UserDetails mockDetails = new org.springframework.security.core.userdetails.User(
-                "new@test.com", "encoded", List.of());
-        when(userDetailsService.loadUserByUsername("new@test.com")).thenReturn(mockDetails);
-        when(tokenProvider.generateToken(any())).thenReturn("t");
-        when(tokenProvider.generateRefreshToken(any())).thenReturn("r");
+        when(tokenProvider.generateToken(any(AuthenticatedUser.class))).thenReturn("t");
+        when(tokenProvider.generateRefreshToken(any(AuthenticatedUser.class))).thenReturn("r");
 
         authService.register(request);
         verify(userRepository).save(any(User.class));
@@ -92,7 +79,7 @@ class AuthServiceTest {
 
     @Test
     void register_DuplicateEmail_Throws() {
-        RegisterRequest request = new RegisterRequest("existing@test.com", "pass", null);
+        RegisterRequest request = new RegisterRequest("existing@test.com", "password");
         when(userRepository.existsByEmail("existing@test.com")).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -105,18 +92,17 @@ class AuthServiceTest {
     void login_Success() {
         LoginRequest request = new LoginRequest("user@test.com", "password");
 
-        UserDetails mockDetails = new org.springframework.security.core.userdetails.User(
-                "user@test.com", "hash", List.of());
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(1L, "user@test.com", "hash", "ROLE_CUSTOMER");
         Authentication mockAuth = mock(Authentication.class);
-        when(mockAuth.getPrincipal()).thenReturn(mockDetails);
+        when(mockAuth.getPrincipal()).thenReturn(authenticatedUser);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(mockAuth);
 
         User user = User.builder().id(1L).email("user@test.com").roles("ROLE_CUSTOMER").build();
-        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(tokenProvider.generateToken(mockDetails)).thenReturn("access");
-        when(tokenProvider.generateRefreshToken(mockDetails)).thenReturn("refresh");
+        when(tokenProvider.generateToken(authenticatedUser)).thenReturn("access");
+        when(tokenProvider.generateRefreshToken(authenticatedUser)).thenReturn("refresh");
 
         AuthResponse response = authService.login(request);
 
@@ -136,13 +122,14 @@ class AuthServiceTest {
 
     @Test
     void refresh_Success() {
-        UserDetails mockDetails = new org.springframework.security.core.userdetails.User(
-                "user@test.com", "hash", List.of());
+        when(tokenProvider.validateToken("old-refresh")).thenReturn(true);
+        when(tokenProvider.isRefreshToken("old-refresh")).thenReturn(true);
         when(tokenProvider.getUsernameFromToken("old-refresh")).thenReturn("user@test.com");
-        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(mockDetails);
-        when(tokenProvider.validateToken("old-refresh", mockDetails)).thenReturn(true);
-        when(tokenProvider.generateToken(mockDetails)).thenReturn("new-access");
-        when(tokenProvider.generateRefreshToken(mockDetails)).thenReturn("new-refresh");
+
+        User user = User.builder().id(1L).email("user@test.com").passwordHash("hash").roles("ROLE_CUSTOMER").build();
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(tokenProvider.generateToken(any(AuthenticatedUser.class))).thenReturn("new-access");
+        when(tokenProvider.generateRefreshToken(any(AuthenticatedUser.class))).thenReturn("new-refresh");
 
         AuthResponse response = authService.refresh(new RefreshTokenRequest("old-refresh"));
 
@@ -152,13 +139,18 @@ class AuthServiceTest {
 
     @Test
     void refresh_InvalidToken_Throws() {
-        UserDetails mockDetails = new org.springframework.security.core.userdetails.User(
-                "user@test.com", "hash", List.of());
-        when(tokenProvider.getUsernameFromToken("bad-token")).thenReturn("user@test.com");
-        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(mockDetails);
-        when(tokenProvider.validateToken("bad-token", mockDetails)).thenReturn(false);
+        when(tokenProvider.validateToken("bad-token")).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class,
                 () -> authService.refresh(new RefreshTokenRequest("bad-token")));
+    }
+
+    @Test
+    void refresh_AccessTokenRejected() {
+        when(tokenProvider.validateToken("access-token")).thenReturn(true);
+        when(tokenProvider.isRefreshToken("access-token")).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.refresh(new RefreshTokenRequest("access-token")));
     }
 }

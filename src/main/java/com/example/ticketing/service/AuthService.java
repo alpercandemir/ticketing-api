@@ -4,16 +4,14 @@ import com.example.ticketing.domain.Role;
 import com.example.ticketing.domain.User;
 import com.example.ticketing.dto.AuthResponse;
 import com.example.ticketing.dto.LoginRequest;
-import com.example.ticketing.dto.RegisterRequest;
 import com.example.ticketing.dto.RefreshTokenRequest;
+import com.example.ticketing.dto.RegisterRequest;
 import com.example.ticketing.repository.UserRepository;
+import com.example.ticketing.security.AuthenticatedUser;
 import com.example.ticketing.security.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,14 +24,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
-    private final UserDetailsService userDetailsService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider, UserDetailsService userDetailsService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
-        this.userDetailsService = userDetailsService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -41,21 +38,18 @@ public class AuthService {
             throw new IllegalArgumentException("Email already in use");
         }
 
-        Role role = request.role() != null ? request.role() : Role.ROLE_CUSTOMER;
-
         User user = User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
-                .roles(role.name())
+                .roles(Role.ROLE_CUSTOMER.name())
                 .build();
 
-        userRepository.save(user);
+        user = userRepository.save(user);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String accessToken = tokenProvider.generateToken(userDetails);
-        String refreshToken = tokenProvider.generateRefreshToken(userDetails);
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(
+                user.getId(), user.getEmail(), user.getPasswordHash(), user.getRoles());
 
-        return new AuthResponse(accessToken, refreshToken, user.getEmail());
+        return buildAuthResponse(authenticatedUser);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -63,29 +57,37 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        AuthenticatedUser authenticatedUser = (AuthenticatedUser) authentication.getPrincipal();
 
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
+        userRepository.findById(authenticatedUser.getId()).ifPresent(user -> {
+            user.setLastLoginAt(LocalDateTime.now());
+            userRepository.save(user);
+        });
 
-        String accessToken = tokenProvider.generateToken(userDetails);
-        String refreshToken = tokenProvider.generateRefreshToken(userDetails);
-
-        return new AuthResponse(accessToken, refreshToken, user.getEmail());
+        return buildAuthResponse(authenticatedUser);
     }
 
     public AuthResponse refresh(RefreshTokenRequest request) {
         String refreshToken = request.refreshToken();
-        String email = tokenProvider.getUsernameFromToken(refreshToken);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        if (!tokenProvider.validateToken(refreshToken, userDetails)) {
+
+        if (!tokenProvider.validateToken(refreshToken) || !tokenProvider.isRefreshToken(refreshToken)) {
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }
-        String newAccessToken = tokenProvider.generateToken(userDetails);
-        String newRefreshToken = tokenProvider.generateRefreshToken(userDetails);
-        return new AuthResponse(newAccessToken, newRefreshToken, email);
+
+        String email = tokenProvider.getUsernameFromToken(refreshToken);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(
+                user.getId(), user.getEmail(), user.getPasswordHash(), user.getRoles());
+
+        return buildAuthResponse(authenticatedUser);
+    }
+
+    private AuthResponse buildAuthResponse(AuthenticatedUser authenticatedUser) {
+        String accessToken = tokenProvider.generateToken(authenticatedUser);
+        String refreshToken = tokenProvider.generateRefreshToken(authenticatedUser);
+        return new AuthResponse(accessToken, refreshToken, authenticatedUser.getUsername());
     }
 }

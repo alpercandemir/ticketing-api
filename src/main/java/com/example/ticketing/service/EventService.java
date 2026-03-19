@@ -6,8 +6,8 @@ import com.example.ticketing.domain.Role;
 import com.example.ticketing.dto.EventRequest;
 import com.example.ticketing.repository.EventRepository;
 import com.example.ticketing.security.AuthenticatedUser;
+import com.example.ticketing.security.SecurityContextHelper;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +26,7 @@ public class EventService {
     @Transactional
     @AuditLoggable(action = "CREATE_EVENT", resourceType = "Event")
     public Event createEvent(EventRequest request) {
-        AuthenticatedUser principal = getCurrentUser();
+        AuthenticatedUser principal = SecurityContextHelper.getCurrentUser();
 
         Event event = Event.builder()
                 .ownerId(principal.getId())
@@ -49,11 +49,8 @@ public class EventService {
 
         verifyOwnershipOrAdmin(event);
 
-        event.setTitle(request.title());
-        event.setVenue(request.venue());
-        event.setStartsAt(request.startsAt());
-        event.setEndsAt(request.endsAt());
-        event.setCapacity(request.capacity());
+        event.updateDetails(request.title(), request.venue(), request.startsAt(),
+                request.endsAt(), request.capacity());
 
         return eventRepository.save(event);
     }
@@ -66,12 +63,13 @@ public class EventService {
 
         verifyOwnershipOrAdmin(event);
 
-        event.setPublished(true);
+        event.publish();
         return eventRepository.save(event);
     }
 
+    @Transactional(readOnly = true)
     public List<Event> listEvents(Long ownerId) {
-        AuthenticatedUser principal = getCurrentUser();
+        AuthenticatedUser principal = SecurityContextHelper.getCurrentUser();
         boolean isAdmin = principal.hasRole(Role.ROLE_ADMIN);
 
         if (ownerId != null) {
@@ -87,22 +85,13 @@ public class EventService {
         return eventRepository.findByOwnerId(principal.getId());
     }
 
+    @Transactional(readOnly = true)
     public List<Event> discoverEvents(LocalDateTime from, LocalDateTime to, String q) {
         return eventRepository.discoverEvents(from, to, q);
     }
 
-    private AuthenticatedUser getCurrentUser() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        if (principal instanceof AuthenticatedUser authenticatedUser) {
-            return authenticatedUser;
-        }
-
-        throw new AccessDeniedException("User not authenticated");
-    }
-
     private void verifyOwnershipOrAdmin(Event event) {
-        AuthenticatedUser principal = getCurrentUser();
+        AuthenticatedUser principal = SecurityContextHelper.getCurrentUser();
         boolean isAdmin = principal.hasRole(Role.ROLE_ADMIN);
         boolean isOwner = event.getOwnerId().equals(principal.getId());
 

@@ -25,8 +25,9 @@ public class IdempotencyKey {
 
     private Integer responseStatus;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private IdempotencyStatus status;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -83,11 +84,11 @@ public class IdempotencyKey {
         this.responseStatus = responseStatus;
     }
 
-    public String getStatus() {
+    public IdempotencyStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(IdempotencyStatus status) {
         this.status = status;
     }
 
@@ -140,7 +141,7 @@ public class IdempotencyKey {
             return this;
         }
 
-        public Builder status(String status) {
+        public Builder status(IdempotencyStatus status) {
             key.setStatus(status);
             return this;
         }

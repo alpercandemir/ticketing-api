@@ -3,14 +3,14 @@ package com.example.ticketing.audit;
 import com.example.ticketing.domain.AuditLog;
 import com.example.ticketing.repository.AuditLogRepository;
 import com.example.ticketing.security.AuthenticatedUser;
+import com.example.ticketing.security.SecurityContextHelper;
 import jakarta.servlet.http.HttpServletRequest;
-
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -21,7 +21,7 @@ import java.lang.reflect.Method;
 @Component
 public class AuditLoggerAspect {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuditLoggerAspect.class);
+    private static final Logger log = LoggerFactory.getLogger(AuditLoggerAspect.class);
 
     private final AuditLogRepository auditLogRepository;
 
@@ -47,19 +47,7 @@ public class AuditLoggerAspect {
                 userAgent = request.getHeader("User-Agent");
             }
 
-            // Attempt to get resourceId from the result if it's an entity with an ID
-            String resourceId = null;
-            if (result != null) {
-                try {
-                    Method getIdMethod = result.getClass().getMethod("getId");
-                    Object idValue = getIdMethod.invoke(result);
-                    if (idValue != null) {
-                        resourceId = idValue.toString();
-                    }
-                } catch (Exception ignored) {
-                    // Result doesn't have a standard getId method
-                }
-            }
+            String resourceId = extractResourceId(result);
 
             AuditLog logEntry = AuditLog.builder()
                     .actorId(actorId)
@@ -73,6 +61,19 @@ public class AuditLoggerAspect {
             auditLogRepository.save(logEntry);
         } catch (Exception e) {
             log.error("Failed to save audit log", e);
+        }
+    }
+
+    private String extractResourceId(Object result) {
+        if (result == null) {
+            return null;
+        }
+        try {
+            Method getIdMethod = result.getClass().getMethod("getId");
+            Object idValue = getIdMethod.invoke(result);
+            return idValue != null ? idValue.toString() : null;
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
@@ -90,10 +91,10 @@ public class AuditLoggerAspect {
     }
 
     private Long getActorId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser principal) {
-            return principal.getId();
+        try {
+            return SecurityContextHelper.getCurrentUser().getId();
+        } catch (Exception e) {
+            return null;
         }
-        return null;
     }
 }

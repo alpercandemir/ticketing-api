@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api")
 public class ReservationController {
 
     private final ReservationService reservationService;
@@ -19,7 +19,7 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    @PostMapping("/api/events/{id}/reservations")
+    @PostMapping("/events/{id}/reservations")
     @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
     public ResponseEntity<ReservationResponse> reserveSeats(
             @PathVariable("id") Long eventId,
@@ -32,14 +32,14 @@ public class ReservationController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @PostMapping("/api/reservations/{id}/confirm")
+    @PostMapping("/reservations/{id}/confirm")
     @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
     public ResponseEntity<Void> confirmReservation(@PathVariable Long id) {
         reservationService.confirmReservation(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/api/reservations/{id}/cancel")
+    @PostMapping("/reservations/{id}/cancel")
     @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
     public ResponseEntity<Void> cancelReservation(@PathVariable Long id) {
         reservationService.cancelReservation(id);

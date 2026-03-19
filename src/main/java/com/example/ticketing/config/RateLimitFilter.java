@@ -1,5 +1,7 @@
 package com.example.ticketing.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -13,16 +15,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
+    private final Cache<String, Bucket> cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterAccess(Duration.ofMinutes(5))
+            .build();
 
     private Bucket createNewBucket() {
-        // 50 requests per minute
         Refill refill = Refill.intervally(50, Duration.ofMinutes(1));
         Bandwidth limit = Bandwidth.classic(50, refill);
         return Bucket.builder().addLimit(limit).build();
@@ -30,7 +32,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private Bucket resolveBucket(HttpServletRequest request) {
         String ip = getClientIP(request);
-        return cache.computeIfAbsent(ip, k -> createNewBucket());
+        return cache.get(ip, k -> createNewBucket());
     }
 
     private String getClientIP(HttpServletRequest request) {
@@ -44,7 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         Bucket bucket = resolveBucket(request);
 
         if (bucket.tryConsume(1)) {
