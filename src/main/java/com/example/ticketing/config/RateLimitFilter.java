@@ -19,6 +19,12 @@ import java.time.Duration;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && (path.equals("/h2-console") || path.startsWith("/h2-console/"));
+    }
+
     private final Cache<String, Bucket> cache = Caffeine.newBuilder()
             .maximumSize(10_000)
             .expireAfterAccess(Duration.ofMinutes(5))
