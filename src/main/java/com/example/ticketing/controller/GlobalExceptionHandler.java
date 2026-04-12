@@ -1,7 +1,11 @@
 package com.example.ticketing.controller;
 
 import com.example.ticketing.dto.ErrorResponse;
+import com.example.ticketing.exception.IdempotencyKeyInProgressException;
+import com.example.ticketing.exception.IdempotentReplayException;
+import com.example.ticketing.exception.MissingIdempotencyKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +19,26 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MissingIdempotencyKeyException.class)
+    public ResponseEntity<ErrorResponse> handleMissingIdempotencyKey(MissingIdempotencyKeyException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IdempotencyKeyInProgressException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyKeyInProgress(IdempotencyKeyInProgressException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @ExceptionHandler(IdempotentReplayException.class)
+    public ResponseEntity<String> handleIdempotentReplay(IdempotentReplayException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getHttpStatus());
+        if (status == null) {
+            status = HttpStatus.OK;
+        }
+        String body = ex.getResponseBody() != null ? ex.getResponseBody() : "{}";
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(body);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
