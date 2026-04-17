@@ -1,13 +1,7 @@
 package com.example.ticketing.config;
 
-import com.example.ticketing.domain.IdempotencyKey;
-import com.example.ticketing.domain.IdempotencyStatus;
-import com.example.ticketing.repository.IdempotencyKeyRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -17,6 +11,13 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import com.example.ticketing.domain.IdempotencyKey;
+import com.example.ticketing.domain.IdempotencyStatus;
+import com.example.ticketing.repository.IdempotencyKeyRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 @ControllerAdvice
 public class IdempotencyResponseBodyAdvice implements ResponseBodyAdvice<Object> {

@@ -1,10 +1,7 @@
 package com.example.ticketing.audit;
 
-import com.example.ticketing.domain.AuditLog;
-import com.example.ticketing.repository.AuditLogRepository;
-import com.example.ticketing.security.AuthenticatedUser;
-import com.example.ticketing.security.SecurityContextHelper;
-import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
@@ -15,7 +12,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.lang.reflect.Method;
+import com.example.ticketing.domain.AuditLog;
+import com.example.ticketing.repository.AuditLogRepository;
+import com.example.ticketing.security.SecurityContextHelper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Aspect
 @Component
